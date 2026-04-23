@@ -7,9 +7,9 @@ import { CalendarIcon } from 'lucide-react'
 
 import { agendamentoSchema, type AgendamentoFormData } from './AgendamentoSchema';
 import { useAgendamentoStore } from '../../store/useAgendamentoStore';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,7 +22,7 @@ const TODOS_OS_HORARIOS = [
 ];
 
 export function AgendamentoForm() {
-  const { agendamentos } = useAgendamentoStore();
+  const { agendamentos, adicionarAgendamento } = useAgendamentoStore();
 
   const form = useForm<AgendamentoFormData>({
     resolver: zodResolver(agendamentoSchema),
@@ -70,15 +70,22 @@ export function AgendamentoForm() {
   }, [dataSelecionada, form]);
 
   const onSubmit = async (data: AgendamentoFormData) => {
-    const payloadParaApi = {
+    const novoAgendamento = {
       nome: data.nome,
       cpf: data.cpf,
       dataNascimento: format(data.dataNascimento, 'yyyy-MM-dd'),
       dataAgendamento: format(data.dataAgendamento, 'yyyy-MM-dd'),
       horarioAgendamento: data.horarioAgendamento,
+      realizado: false,
+      id: Date.now().toString(),
     };
 
-    console.log('Dados prontos para envio:', payloadParaApi);
+    console.log('Dados prontos para envio:', novoAgendamento);
+
+    adicionarAgendamento(novoAgendamento);
+    form.reset();
+
+    console.log('Agendamento realizado com sucesso!');
   };
 
   return (

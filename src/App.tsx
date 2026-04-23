@@ -1,7 +1,31 @@
-export function App() {
+import { AgendamentoForm } from './components/AgendamentoForm/AgendamentoForm';
+import { AgendamentoList } from './components/AgendamentoList/AgendamentoList';
+
+export default function App() {
   return (
-    <main>
-      <h1>Sistema de Agendamento de Vacinação</h1>
-    </main>
+    // bg-slate-50 define o fundo levemente cinza
+    // container mx-auto centraliza o conteúdo
+    // p-8 adiciona padding nas laterais e topo
+    <div className="min-h-screen bg-slate-50 antialiased text-slate-900">
+      <main className="container mx-auto py-10 px-4">
+        <header className="mb-10 text-center">
+          <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-2">
+            Portal de Vacinação
+          </h1>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          
+          <div className="lg:col-span-5 flex justify-center">
+             <AgendamentoForm />
+          </div>
+
+          <div className="lg:col-span-7">
+             <AgendamentoList />
+          </div>
+
+        </div>
+      </main>
+    </div>
   );
 }
