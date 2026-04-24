@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner"
+import { Header } from "@/components/Header/Header"
 import { ModalSucesso } from "./components/Modal/ModalSucesso";
 import { ModalCancelamento } from "./components/Modal/ModalCancelamento"
 import { AgendamentoForm } from './components/AgendamentoForm/AgendamentoForm';
@@ -10,6 +11,7 @@ export default function App() {
     // container mx-auto centraliza o conteúdo
     // p-8 adiciona padding nas laterais e topo
     <div className="min-h-screen bg-slate-50 antialiased text-slate-900">
+      <Header />
       <main className="container mx-auto py-10 px-4">
         <header className="mb-10 text-center">
           <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-2">
