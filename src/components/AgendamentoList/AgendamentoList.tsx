@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAgendamentoStore } from '../../store/useAgendamentoStore';
@@ -8,16 +8,45 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '../ui/button';
+import { Input } from '@/components/ui/input'
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs'
 import { CheckCircle2, XCircle } from 'lucide-react';
 
 export function AgendamentoList() {
   const { agendamentos, pacientes, concluirAgendamento } = useAgendamentoStore();
   const abrirModalCancelamento = useModalCancelamentoStore((state) => state.abrirModal);
 
+  const [dataFiltro, setDataFiltro] = useState<string>(''); // Vazio = mostra todos os dias
+  const [statusFiltro, setStatusFiltro] = useState<string>('todos');
+
+  const agendamentosFiltrados = agendamentos.filter((agendamento) => {
+    const passouNoFiltroData = dataFiltro 
+      ? agendamento.dataAgendamento === dataFiltro 
+      : true;
+
+    let passouNoFiltroStatus = false;
+
+    switch (statusFiltro) {
+      case('todos'):
+        passouNoFiltroStatus = true;
+        break;
+      case('pendentes'):
+        passouNoFiltroStatus = agendamento.realizado === false || agendamento.realizado === undefined;
+        break;
+      case('concluidos'):
+        passouNoFiltroStatus = agendamento.realizado === true;
+        break;
+      default:
+        passouNoFiltroStatus = agendamento.realizado === false || agendamento.realizado === undefined;
+        break;
+    }
+
+    return passouNoFiltroData && passouNoFiltroStatus;
+  });
+
   // Lógica de agrupamento por Data e Horário
   const agendamentosAgrupados = useMemo(() => {
-    const agendamentosPendentes = agendamentos.filter(a => a.realizado === false);
-    const agrupamento = agendamentosPendentes.reduce((acc, agendamento) => {
+    const agrupamento = agendamentosFiltrados.reduce((acc, agendamento) => {
       // Normaliza a data para string formato YYYY-MM-DD
       const dataStr = agendamento.dataAgendamento instanceof Date
         ? format(agendamento.dataAgendamento, 'yyyy-MM-dd')
@@ -36,16 +65,49 @@ export function AgendamentoList() {
     }, {} as Record<string, Record<string, typeof agendamentos>>);
 
     return agrupamento;
-  }, [agendamentos]);
+  }, [agendamentosFiltrados]);
 
   // Ordenar as datas para mostrar os próximos agendamentos primeiro
   const datasOrdenadas = Object.keys(agendamentosAgrupados).sort();
 
-  if (agendamentos.length === 0) {
+  if (agendamentosFiltrados.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-slate-500 border border-dashed rounded-xl bg-slate-50">
-        <p>Nenhum agendamento marcado ainda.</p>
-      </div>
+      <>
+        <div className="space-y-6 w-full max-w-2xl">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-800">
+            Agenda de Vacinação
+          </h2>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-lg border shadow-sm">
+            
+            {/* Filtro de Data */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <label className="text-sm font-medium text-slate-600 whitespace-nowrap">
+                Filtrar por dia:
+              </label>
+              <Input 
+                type="date" 
+                value={dataFiltro} 
+                onChange={(e) => setDataFiltro(e.target.value)}
+                className="w-full sm:w-auto"
+              />
+            </div>
+
+            {/* Filtro de Status */}
+            <Tabs value={statusFiltro} onValueChange={setStatusFiltro} className="w-full sm:w-auto">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="todos">Todos</TabsTrigger>
+                <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
+                <TabsTrigger value="concluidos">Concluídos</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </div>
+        
+        <div className="flex flex-col items-center justify-center p-8 text-slate-500 border border-dashed rounded-xl bg-slate-50">
+          <p>Nenhum agendamento marcado ainda.</p>
+        </div>
+      </>
     );
   }
 
@@ -54,6 +116,32 @@ export function AgendamentoList() {
       <h2 className="text-2xl font-bold tracking-tight text-slate-800">
         Agenda de Vacinação
       </h2>
+
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-lg border shadow-sm">
+        
+        {/* Filtro de Data */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-sm font-medium text-slate-600 whitespace-nowrap">
+            Filtrar por dia:
+          </label>
+          <Input 
+            type="date" 
+            value={dataFiltro} 
+            onChange={(e) => setDataFiltro(e.target.value)}
+            className="w-full sm:w-auto"
+          />
+        </div>
+
+        {/* Filtro de Status */}
+        <Tabs value={statusFiltro} onValueChange={setStatusFiltro} className="w-full sm:w-auto">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="todos">Todos</TabsTrigger>
+            <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
+            <TabsTrigger value="concluidos">Concluídos</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+      </div>
 
       {datasOrdenadas.map((dataStr) => {
         // Converte a string 'YYYY-MM-DD' de volta para Date ajustando o fuso
