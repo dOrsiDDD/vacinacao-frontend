@@ -9,6 +9,7 @@ interface AgendamentoState {
   adicionarAgendamento: (novoAgendamento: Omit<Agendamento, 'id' | 'realizado'>) => void;
   adicionarPaciente: (paciente: Paciente) => void;
   concluirAgendamento: (id: string) => void;
+  retornarParaPendente: (id: string) => void;
   cancelarAgendamento: (id: string) => void;
   setAgendamentosIniciais: (agendamentosDaApi: Agendamento[]) => void;
 }
@@ -36,6 +37,15 @@ export const useAgendamentoStore = create<AgendamentoState>()(
             agendamento.id === id
               ? { ...agendamento, realizado: true }
               : agendamento,
+          ),
+        })),
+
+      retornarParaPendente: (id) => 
+        set((state) => ({
+          agendamentos: state.agendamentos.map((agendamento) =>
+            agendamento.id === id 
+            ? { ...agendamento, realizado: false } 
+            : agendamento
           ),
         })),
 
