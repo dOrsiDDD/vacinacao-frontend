@@ -10,10 +10,10 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '../ui/button';
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs'
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
 
 export function AgendamentoList() {
-  const { agendamentos, pacientes, concluirAgendamento } = useAgendamentoStore();
+  const { agendamentos, pacientes, concluirAgendamento, retornarParaPendente } = useAgendamentoStore();
   const abrirModalCancelamento = useModalCancelamentoStore((state) => state.abrirModal);
 
   const [dataFiltro, setDataFiltro] = useState<string>(''); // Vazio = mostra todos os dias
@@ -174,44 +174,64 @@ export function AgendamentoList() {
                         {pacientesDoHorario.map((item, idx)  => {
                           const pacienteDados = pacientes.find(p => p.cpf === item.cpf);
                           const nomeExibicao = pacienteDados ? pacienteDados.nome : "Paciente Desconhecido";
+                          const isConcluido = item.realizado === true;
                         
                           return (
 
-                          <div key={item.id} className="flex justify-between items-center text-sm">
+                          <div key={item.id} className={`flex justify-between items-center text-sm ${isConcluido ? 'bg-emerald-50/70 border border-emerald-100' : 'bg-transparent'}`}>
                             <div className="flex flex-col">
-                              <span className="font-medium text-slate-700">{nomeExibicao}</span>
-                              <span className="text-slate-500 text-xs">CPF: {item.cpf}</span>
+                              <span className={`font-medium ${isConcluido ? 'text-emerald-700 line-through decoration-emerald-500 decoration-2 opacity-80' : 'text-slate-700'}`}>{nomeExibicao}</span>
+                              <span className={`text-xs ${isConcluido ? 'text-emerald-600/70' : 'text-slate-500'} text-slate-500 text-xs`}>CPF: {item.cpf}</span>
                             </div>
 
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {idx + 1}ª Vaga
-                              </Badge>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 w-8"
-                                onClick={() => concluirAgendamento(item.id)}
-                                title="Marcar como Concluído"
-                              >
-                                <CheckCircle2 className="w-5 h-5" />
-                              </Button>
-                              
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 w-8"
-                                onClick={() => abrirModalCancelamento({
-                                  id: item.id,
-                                  nomePaciente: nomeExibicao,
-                                  cpf: item.cpf,
-                                  data: format(item.dataAgendamento, 'dd/MM/yyyy'),
-                                  horario: item.horarioAgendamento
-                                })}
-                                title="Cancelar Agendamento"
-                              >
-                                <XCircle className="w-5 h-5" />
-                              </Button>
+                              {!isConcluido ? (
+                                <>
+                                  <Badge variant="outline" className="text-xs">
+                                    {idx + 1}ª Vaga
+                                  </Badge>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 w-8"
+                                    onClick={() => concluirAgendamento(item.id)}
+                                    title="Marcar como Concluído"
+                                  >
+                                    <CheckCircle2 className="w-5 h-5" />
+                                  </Button>
+                                  
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 w-8"
+                                    onClick={() => abrirModalCancelamento({
+                                      id: item.id,
+                                      nomePaciente: nomeExibicao,
+                                      cpf: item.cpf,
+                                      data: format(item.dataAgendamento, 'dd/MM/yyyy'),
+                                      horario: item.horarioAgendamento
+                                    })}
+                                    title="Cancelar Agendamento"
+                                  >
+                                    <XCircle className="w-5 h-5" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none text-xs">
+                                    Vacinado
+                                  </Badge>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    className="text-slate-400 hover:text-slate-600 hover:bg-slate-200 h-8 w-8"
+                                    onClick={() => retornarParaPendente(item.id)}
+                                    title="Desfazer (retornar para pendente)"
+                                  >
+                                    <RotateCcw className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              )}
                             </div>
                           </div>
                         );
