@@ -10,7 +10,7 @@ import { Button } from '../ui/button';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
 export function AgendamentoList() {
-  const { agendamentos, cancelarAgendamento, concluirAgendamento } = useAgendamentoStore();
+  const { agendamentos, pacientes,  cancelarAgendamento, concluirAgendamento } = useAgendamentoStore();
 
   // Lógica de agrupamento por Data e Horário
   const agendamentosAgrupados = useMemo(() => {
@@ -70,7 +70,7 @@ export function AgendamentoList() {
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
               {horariosOrdenados.map((horario, index) => {
-                const pacientes = horariosDoDia[horario];
+                const pacientesDoHorario = horariosDoDia[horario];
 
                 return (
                   <div key={horario}>
@@ -81,10 +81,15 @@ export function AgendamentoList() {
 
                       {/* Lista de pacientes daquele horário */}
                       <div className="flex-1 space-y-3">
-                        {pacientes.map((item, idx) => (
+                        {pacientesDoHorario.map((item, idx)  => {
+                          const pacienteDados = pacientes.find(p => p.cpf === item.cpf);
+                          const nomeExibicao = pacienteDados ? pacienteDados.nome : "Paciente Desconhecido";
+                        
+                          return (
+
                           <div key={item.id} className="flex justify-between items-center text-sm">
                             <div className="flex flex-col">
-                              <span className="font-medium text-slate-700">{item.nome}</span>
+                              <span className="font-medium text-slate-700">{nomeExibicao}</span>
                               <span className="text-slate-500 text-xs">CPF: {item.cpf}</span>
                             </div>
 
@@ -113,7 +118,8 @@ export function AgendamentoList() {
                               </Button>
                             </div>
                           </div>
-                        ))}
+                        );
+                        })}
                       </div>
                     </div>
                     
