@@ -11,7 +11,7 @@ import { Button } from '../ui/button';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
 export function AgendamentoList() {
-  const { agendamentos, pacientes,  cancelarAgendamento, concluirAgendamento } = useAgendamentoStore();
+  const { agendamentos, pacientes, concluirAgendamento } = useAgendamentoStore();
   const abrirModalCancelamento = useModalCancelamentoStore((state) => state.abrirModal);
 
   // Lógica de agrupamento por Data e Horário
