@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAgendamentoStore } from '../../store/useAgendamentoStore';
+import { useModalCancelamentoStore } from '../../store/useModalCancelamentoStore'
 
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,8 @@ import { Button } from '../ui/button';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
 export function AgendamentoList() {
-  const { agendamentos, pacientes,  cancelarAgendamento, concluirAgendamento } = useAgendamentoStore();
+  const { agendamentos, pacientes, concluirAgendamento } = useAgendamentoStore();
+  const abrirModalCancelamento = useModalCancelamentoStore((state) => state.abrirModal);
 
   // Lógica de agrupamento por Data e Horário
   const agendamentosAgrupados = useMemo(() => {
@@ -111,7 +113,13 @@ export function AgendamentoList() {
                                 variant="ghost" 
                                 size="icon"
                                 className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 w-8"
-                                onClick={() => cancelarAgendamento(item.id)}
+                                onClick={() => abrirModalCancelamento({
+                                  id: item.id,
+                                  nomePaciente: nomeExibicao,
+                                  cpf: item.cpf,
+                                  data: format(item.dataAgendamento, 'dd/MM/yyyy'),
+                                  horario: item.horarioAgendamento
+                                })}
                                 title="Cancelar Agendamento"
                               >
                                 <XCircle className="w-5 h-5" />
