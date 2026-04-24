@@ -8,8 +8,10 @@ import { CalendarIcon } from 'lucide-react'
 import { agendamentoSchema, type AgendamentoFormData } from './AgendamentoSchema';
 import { cadastroPacienteSchema, type CadastroPacienteFormData } from './CadastroPacientesSchema';
 import { useAgendamentoStore } from '../../store/useAgendamentoStore';
+import { useModalSucessoStore } from '@/store/useModalSucessoStore';
 import { cn } from '../../lib/utils';
 
+import { toast } from "sonner";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,6 +28,7 @@ const TODOS_OS_HORARIOS = [
 export function AgendamentoForm() {
   const { agendamentos, pacientes, adicionarAgendamento, adicionarPaciente } = useAgendamentoStore();
 
+  const abrirModalSucesso = useModalSucessoStore((state) => state.abrirModal);
   const [modalAberto, setModalAberto] = useState(false);
   const [dadosPendentes, setDadosPendentes] = useState<AgendamentoFormData | null>(null);
 
@@ -88,14 +91,14 @@ export function AgendamentoForm() {
       // Salva os dados do form e abre o modal para cadastrar o paciente
       setDadosPendentes(data);
       setModalAberto(true);
-      return; // Para a execução aqui!
+      return;
     }
 
     // Se o paciente existe, segue o fluxo normal
-    executarAgendamento(data.cpf, data.dataAgendamento, data.horarioAgendamento);
+    executarAgendamento(data.cpf, data.dataAgendamento, data.horarioAgendamento, pacienteExiste.nome);
   };
 
-  const executarAgendamento = (cpf: string, dataAgendamento: Date, horarioAgendamento: string) => {
+  const executarAgendamento = (cpf: string, dataAgendamento: Date, horarioAgendamento: string, nome: string) => {
     adicionarAgendamento({
       cpf: cpf,
       dataAgendamento: format(dataAgendamento, 'yyyy-MM-dd'),
@@ -103,7 +106,12 @@ export function AgendamentoForm() {
     });
     
     formPrincipal.reset();
-    alert('Agendamento realizado com sucesso!');
+    abrirModalSucesso({
+      nomePaciente: nome,
+      cpf: cpf,
+      data: format(dataAgendamento, 'dd/MM/yyyy'),
+      horario: horarioAgendamento,
+    })
   };
 
   // --- FUNÇÃO DO BOTÃO "SALVAR" DENTRO DO MODAL ---
@@ -120,12 +128,15 @@ export function AgendamentoForm() {
       dataNascimento: new Date(`${data.dataNascimento}T00:00:00`), 
     });
 
+    toast.success('Paciente cadastrado com sucesso!');
+
     // 2. Continua o agendamento que estava pausado
-    executarAgendamento(dadosPendentes.cpf, dadosPendentes.dataAgendamento, dadosPendentes.horarioAgendamento);
+    executarAgendamento(dadosPendentes.cpf, dadosPendentes.dataAgendamento, dadosPendentes.horarioAgendamento, data.nome);
 
     // 3. Fecha e limpa o modal
     setModalAberto(false);    
-    formModal.reset();
+    formModal.reset()
+    setDadosPendentes(null);
   };
 
   return (
