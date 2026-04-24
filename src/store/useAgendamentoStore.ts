@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { type Agendamento } from '../types/agendamento';
+import { type Paciente } from '../types/paciente';
 
 interface AgendamentoState {
+  pacientes: Paciente[];
   agendamentos: Agendamento[];
-  adicionarAgendamento: (novoAgendamento: Agendamento) => void;
+  adicionarAgendamento: (novoAgendamento: Omit<Agendamento, 'id' | 'realizado'>) => void;
+  adicionarPaciente: (paciente: Paciente) => void;
   concluirAgendamento: (id: string) => void;
   cancelarAgendamento: (id: string) => void;
   setAgendamentosIniciais: (agendamentosDaApi: Agendamento[]) => void;
@@ -13,9 +16,15 @@ interface AgendamentoState {
 export const useAgendamentoStore = create<AgendamentoState>()(
   persist(
     (set) => ({
+      pacientes: [],
       agendamentos: [],
 
       // Ações
+      adicionarPaciente: (paciente) =>
+        set((state) => ({
+          pacientes: [...state.pacientes, paciente],
+        })),
+
       adicionarAgendamento: (novoAgendamento) =>
         set((state) => ({
           agendamentos: [...state.agendamentos, { ...novoAgendamento, id: crypto.randomUUID(), realizado: false }],

@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
@@ -6,6 +6,7 @@ import { ptBR } from 'date-fns/locale/pt-BR';
 import { CalendarIcon } from 'lucide-react'
 
 import { agendamentoSchema, type AgendamentoFormData } from './AgendamentoSchema';
+import { cadastroPacienteSchema, type CadastroPacienteFormData } from './CadastroPacientesSchema';
 import { useAgendamentoStore } from '../../store/useAgendamentoStore';
 import { cn } from '../../lib/utils';
 
@@ -15,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 const TODOS_OS_HORARIOS = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -22,18 +24,28 @@ const TODOS_OS_HORARIOS = [
 ];
 
 export function AgendamentoForm() {
-  const { agendamentos, adicionarAgendamento } = useAgendamentoStore();
+  const { agendamentos, pacientes, adicionarAgendamento, adicionarPaciente } = useAgendamentoStore();
 
-  const form = useForm<AgendamentoFormData>({
+  const [modalAberto, setModalAberto] = useState(false);
+  const [dadosPendentes, setDadosPendentes] = useState<AgendamentoFormData | null>(null);
+
+  const formPrincipal = useForm<AgendamentoFormData>({
     resolver: zodResolver(agendamentoSchema),
     defaultValues: {
-      nome: '',
       cpf: '',
       horarioAgendamento: '',
     }
   });
 
-  const dataSelecionada = useWatch({ control: form.control, name: 'dataAgendamento' });
+  const formModal = useForm<CadastroPacienteFormData>({
+    resolver: zodResolver(cadastroPacienteSchema),
+    defaultValues: {
+      nome: "",
+      dataNascimento: ""
+    }
+  });
+
+  const dataSelecionada = useWatch({ control: formPrincipal.control, name: 'dataAgendamento' });
 
   const horariosDisponiveis = useMemo(() => {
     if (!dataSelecionada) return TODOS_OS_HORARIOS;
@@ -66,171 +78,212 @@ export function AgendamentoForm() {
   // Efeito de segurança: se o usuário escolher um horário, mas depois trocar a data
   // para um dia em que aquele horário já está lotado, limpa o campo 
   useEffect(() => {
-    form.setValue('horarioAgendamento', '');
-  }, [dataSelecionada, form]);
+    formPrincipal.setValue('horarioAgendamento', '');
+  }, [dataSelecionada, formPrincipal]);
 
   const onSubmit = async (data: AgendamentoFormData) => {
-    const novoAgendamento = {
+    const pacienteExiste = pacientes.find((p) => p.cpf === data.cpf);
+
+    if (!pacienteExiste) {
+      // Salva os dados do form e abre o modal para cadastrar o paciente
+      setDadosPendentes(data);
+      setModalAberto(true);
+      return; // Para a execução aqui!
+    }
+
+    // Se o paciente existe, segue o fluxo normal
+    executarAgendamento(data.cpf, data.dataAgendamento, data.horarioAgendamento);
+  };
+
+  const executarAgendamento = (cpf: string, dataAgendamento: Date, horarioAgendamento: string) => {
+    adicionarAgendamento({
+      cpf: cpf,
+      dataAgendamento: format(dataAgendamento, 'yyyy-MM-dd'),
+      horarioAgendamento: horarioAgendamento,
+    });
+    
+    formPrincipal.reset();
+    alert('Agendamento realizado com sucesso!');
+  };
+
+  // --- FUNÇÃO DO BOTÃO "SALVAR" DENTRO DO MODAL ---
+  const handleSalvarNovoPaciente = (data: CadastroPacienteFormData) => {
+    if (!dadosPendentes) {
+      return;
+    }
+
+    // 1. Cadastra o novo paciente na base
+    adicionarPaciente({
+      cpf: dadosPendentes.cpf,
       nome: data.nome,
-      cpf: data.cpf,
-      dataNascimento: format(data.dataNascimento, 'yyyy-MM-dd'),
-      dataAgendamento: format(data.dataAgendamento, 'yyyy-MM-dd'),
-      horarioAgendamento: data.horarioAgendamento,
-      realizado: false,
-      id: Date.now().toString(),
-    };
+      // Lida com o timezone criando a data a partir da string com T00:00:00
+      dataNascimento: new Date(`${data.dataNascimento}T00:00:00`), 
+    });
 
-    console.log('Dados prontos para envio:', novoAgendamento);
+    // 2. Continua o agendamento que estava pausado
+    executarAgendamento(dadosPendentes.cpf, dadosPendentes.dataAgendamento, dadosPendentes.horarioAgendamento);
 
-    adicionarAgendamento(novoAgendamento);
-    form.reset();
-
-    console.log('Agendamento realizado com sucesso!');
+    // 3. Fecha e limpa o modal
+    setModalAberto(false);    
+    formModal.reset();
   };
 
   return (
-    <Form {...form}>
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-md w-full p-6 bg-white rounded-xl shadow-sm border border-slate-200">
-      <div className="space-y-4">
-        <FormField
-          control={form.control}
-          name="nome"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nome do Paciente</FormLabel>
-              <FormControl>
-                <Input placeholder="Digite o nome do paciente" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-            control={form.control}
-            name="cpf"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>CPF (apenas números)</FormLabel>
-                <FormControl>
-                  <Input placeholder="12345678901" maxLength={11} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
+    <>
+      <Form {...formPrincipal}>
+      <form onSubmit={formPrincipal.handleSubmit(onSubmit)} className="space-y-6 max-w-md w-full p-6 bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="space-y-4">
           <FormField
-            control={form.control}
-            name="dataNascimento"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Data de Nascimento</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                      >
-                        {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione a data</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                      initialFocus
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="dataAgendamento"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Data do Agendamento</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                      >
-                        {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione o dia</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                      initialFocus
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="horarioAgendamento"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Horário</FormLabel>
-                <Select 
-                  disabled={!dataSelecionada || horariosDisponiveis.length === 0} 
-                  onValueChange={field.onChange} 
-                  value={field.value}
-                >
+              control={formPrincipal.control}
+              name="cpf"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CPF (apenas números)</FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={
-                        !dataSelecionada 
-                          ? 'Selecione a data primeiro' 
-                          : horariosDisponiveis.length === 0 
-                            ? 'Todos os horários lotados!' 
-                            : 'Selecione o horário'
-                      } />
-                    </SelectTrigger>
+                    <Input placeholder="12345678901" maxLength={11} {...field} />
                   </FormControl>
-                  <SelectContent>
-                    {horariosDisponiveis.map((hora) => (
-                      <SelectItem key={hora} value={hora}>{hora}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <Button 
-          type="submit" 
-          className="w-full" 
-          disabled={form.formState.isSubmitting || horariosDisponiveis.length === 0}
-        >
-          {form.formState.isSubmitting ? 'Salvando...' : 'Agendar Vacinação'}
-        </Button>
-      </form>
-    </Form>
+            <FormField
+              control={formPrincipal.control}
+              name="dataAgendamento"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data do Agendamento</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                        >
+                          {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione o dia</span>}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        initialFocus
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={formPrincipal.control}
+              name="horarioAgendamento"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Horário</FormLabel>
+                  <Select 
+                    disabled={!dataSelecionada || horariosDisponiveis.length === 0} 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={
+                          !dataSelecionada 
+                            ? 'Selecione a data primeiro' 
+                            : horariosDisponiveis.length === 0 
+                              ? 'Todos os horários lotados!' 
+                              : 'Selecione o horário'
+                        } />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {horariosDisponiveis.map((hora) => (
+                        <SelectItem key={hora} value={hora}>{hora}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={formPrincipal.formState.isSubmitting || horariosDisponiveis.length === 0}
+          >
+            {formPrincipal.formState.isSubmitting ? 'Salvando...' : 'Agendar Vacinação'}
+          </Button>
+        </form>
+      </Form>
+      
+      <Dialog open={modalAberto} onOpenChange={setModalAberto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Paciente Não Encontrado</DialogTitle>
+            <DialogDescription>
+              O CPF informado não consta em nossa base. Cadastre o paciente para continuar o agendamento.
+            </DialogDescription>  
+          </DialogHeader>
+
+          <Form {...formModal}>
+            <form onSubmit={formModal.handleSubmit(handleSalvarNovoPaciente)} className="space-y-4 py-4">
+
+              <div className="space-y-2">
+                <FormLabel>CPF</FormLabel>
+                <Input disabled value={dadosPendentes?.cpf || ""} />
+              </div>
+
+              <FormField
+                control={formModal.control}
+                name="nome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Completo do Paciente</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field}
+                        placeholder="Digite o nome completo" 
+                      />  
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control ={formModal.control}
+                name="dataNascimento"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Nascimento</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="date" 
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setModalAberto(false)}>Cancelar</Button>
+              <Button type="submit">Cadastrar e Agendar</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
-
