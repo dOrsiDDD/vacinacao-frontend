@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/sonner"
-import { ModalSucesso } from "./components/ModalSucesso/ModalSucesso";
+import { ModalSucesso } from "./components/Modal/ModalSucesso";
+import { ModalCancelamento } from "./components/Modal/ModalCancelamento"
 import { AgendamentoForm } from './components/AgendamentoForm/AgendamentoForm';
 import { AgendamentoList } from './components/AgendamentoList/AgendamentoList';
 
@@ -27,6 +28,7 @@ export default function App() {
           </div>
 
           <ModalSucesso />
+          <ModalCancelamento />
 
           <Toaster richColors position="top-right" />
         </div>
