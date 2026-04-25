@@ -11,6 +11,7 @@ import { Button } from '../ui/button';
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs'
 import { CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
+import { AgendamentoListSkeleton } from './AgendamentoListSkeleton';
 
 export function AgendamentoList() {
   const { agendamentos, 
@@ -119,6 +120,7 @@ export function AgendamentoList() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center p-8 text-blue-500 bg-blue-50 border border-blue-200 border-dashed rounded-xl animate-pulse">
           <p className="font-medium">Sincronizando agendamentos...</p>
+          <AgendamentoListSkeleton />
         </div>
       ) : agendamentosFiltrados.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-8 text-slate-500 border border-dashed rounded-xl bg-slate-50">
