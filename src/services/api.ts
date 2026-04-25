@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useLoadingStore } from '../store/useLoadingStore';
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://localhost:7200/api', 
+  baseURL: 'https://localhost:7052/', 
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

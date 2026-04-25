@@ -2,16 +2,20 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { type Agendamento } from '../types/agendamento';
 import { type Paciente } from '../types/paciente';
+import { api } from '../services/api';
 
 interface AgendamentoState {
   pacientes: Paciente[];
   agendamentos: Agendamento[];
-  adicionarAgendamento: (novoAgendamento: Omit<Agendamento, 'id' | 'realizado'>) => void;
-  adicionarPaciente: (paciente: Paciente) => void;
-  concluirAgendamento: (id: string) => void;
-  retornarParaPendente: (id: string) => void;
-  cancelarAgendamento: (id: string) => void;
-  setAgendamentosIniciais: (agendamentosDaApi: Agendamento[]) => void;
+  isLoading: boolean;
+
+  buscarAgendamentos: () => Promise<void>;
+  buscarPacientes: () => Promise<void>;
+  adicionarAgendamento: (novoAgendamento : Omit<Agendamento, 'id'>) => Promise<void>;
+  adicionarPaciente: (paciente: Omit<Paciente, 'id'>) => Promise<Paciente>;
+  concluirAgendamento: (id: number) => Promise<void>;
+  retornarParaPendente: (id: number) => Promise<void>;
+  cancelarAgendamento: (id: number) => Promise<void>;
 }
 
 export const useAgendamentoStore = create<AgendamentoState>()(
@@ -19,46 +23,104 @@ export const useAgendamentoStore = create<AgendamentoState>()(
     (set) => ({
       pacientes: [],
       agendamentos: [],
+      isLoading: false,
 
       // Ações
-      adicionarPaciente: (paciente) =>
-        set((state) => ({
-          pacientes: [...state.pacientes, paciente],
-        })),
+      buscarPacientes: async () => {
+        set({ isLoading: true });
+        try {
+          const response = await api.get('/CadastroPaciente/ListarPacientes');
+          set({ pacientes: response.data });
+        } catch (error) {
+          console.error("Erro ao buscar pacientes", error);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
 
-      adicionarAgendamento: (novoAgendamento) =>
-        set((state) => ({
-          agendamentos: [...state.agendamentos, { ...novoAgendamento, id: crypto.randomUUID(), realizado: false }],
-        })),
+      buscarAgendamentos: async () => {
+        set({ isLoading: true });
+        try {
+          const response = await api.get('/CadastroAgendamento/ListarAgendamentos');
+          set({ agendamentos: response.data });
+        } catch (error) {
+          console.error("Erro ao buscar agendamentos", error);
+        } finally {
+          set({ isLoading: false });
+        }
+      },  
+      adicionarPaciente: async (paciente) => {
+        try {
+          const pacienteFormatado = {
+            ...paciente,
+            dataNascimento: typeof paciente.dataNascimento === 'string' ? paciente.dataNascimento : paciente.dataNascimento.toISOString().split('T')[0],
+          };
+          const response = await api.post('/CadastroPaciente/CadastrarPaciente', pacienteFormatado);
+          const pacienteCadastrado: Paciente = response.data;
+          set((state) => ({
+            pacientes: [...state.pacientes, pacienteCadastrado] 
+          }));
+          return pacienteCadastrado;
+        } catch (error) {
+          console.error("Erro ao cadastrar paciente", error);
+          throw error;
+        }
+      },
 
-      concluirAgendamento: (id) =>
-        set((state) => ({
-          agendamentos: state.agendamentos.map((agendamento) =>
-            agendamento.id === id
-              ? { ...agendamento, realizado: true }
-              : agendamento,
-          ),
-        })),
+      adicionarAgendamento: async (novoAgendamento) => {
+        try {
+          const agendamentoFormatado = {
+            ...novoAgendamento,
+            dataAgendamento: typeof novoAgendamento.dataAgendamento === 'string' ? novoAgendamento.dataAgendamento : novoAgendamento.dataAgendamento.toISOString().split('T')[0],
+          };
+          const response = await api.post('/CadastroAgendamento/CadastrarAgendamento', agendamentoFormatado);
+          set((state) => ({
+            agendamentos: [...state.agendamentos, response.data]
+          }));
+        } catch (error) {
+          console.error("Erro ao agendar", error);
+        }
+      },
 
-      retornarParaPendente: (id) => 
-        set((state) => ({
-          agendamentos: state.agendamentos.map((agendamento) =>
-            agendamento.id === id 
-            ? { ...agendamento, realizado: false } 
-            : agendamento
-          ),
-        })),
+      concluirAgendamento: async (id) => {
+        try {
+          await api.put(`/CadastroAgendamento/AtualizarStatus?id=${id}`, { status: 2 });
+          
+          set((state) => ({
+            agendamentos: state.agendamentos.map((a) =>
+              a.id === id ? { ...a, realizado: true } : a
+            ),
+          }));
+        } catch (error) {
+          console.error("Erro ao concluir", error);
+        }
+      },
 
-      cancelarAgendamento: (id) =>
-        set((state) => ({
-          agendamentos: state.agendamentos.filter((agendamento) => agendamento.id !== id
-          ),
-        })),
+      retornarParaPendente: async (id) => {
+        try {
+          await api.put(`/CadastroAgendamento/AtualizarStatus?id=${id}`, { status: 1 });
+          
+          set((state) => ({
+            agendamentos: state.agendamentos.map((a) =>
+              a.id === id ? { ...a, realizado: false } : a
+            ),
+          }));
+        } catch (error) {
+          console.error("Erro ao concluir", error);
+        }
+      },
 
-      setAgendamentosIniciais: (agendamentosDaApi) =>
-        set(() => ({
-          agendamentos: agendamentosDaApi,
-        })),
+      cancelarAgendamento: async (id) => {
+        try {
+          await api.delete(`/CadastroAgendamento/DeletarAgendamento?id=${id}`);
+          
+          set((state) => ({
+            agendamentos: state.agendamentos.filter((a) => a.id !== id),
+          }));
+        } catch (error) {
+          console.error("Erro ao deletar", error);
+        }
+      },
     }),
     {
       name: 'vacinacao-storage',

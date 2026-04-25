@@ -36,7 +36,7 @@ export function AgendamentoForm() {
     resolver: zodResolver(agendamentoSchema),
     defaultValues: {
       cpf: '',
-      horarioAgendamento: '',
+      horaAgendamento: '',
     }
   });
 
@@ -57,6 +57,9 @@ export function AgendamentoForm() {
 
     // 1. Filtra os agendamentos que já existem para este dia específico
     const agendamentosDoDia = agendamentos.filter((ag) => {
+      if (!ag || !ag.dataAgendamento) {
+        return false; 
+      }
       // Como a data na store pode ser string ou Date, formatamos para comparar com segurança
       const dataAgString = ag.dataAgendamento instanceof Date 
         ? format(ag.dataAgendamento, 'yyyy-MM-dd') 
@@ -67,7 +70,7 @@ export function AgendamentoForm() {
 
     // 2. Conta quantas vagas estão ocupadas por horário (Ex: { "08:00": 2, "09:00": 1 })
     const contagemPorHora = agendamentosDoDia.reduce((acc, ag) => {
-      acc[ag.horarioAgendamento] = (acc[ag.horarioAgendamento] || 0) + 1;
+      acc[ag.horaAgendamento] = (acc[ag.horaAgendamento] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -81,7 +84,7 @@ export function AgendamentoForm() {
   // Efeito de segurança: se o usuário escolher um horário, mas depois trocar a data
   // para um dia em que aquele horário já está lotado, limpa o campo 
   useEffect(() => {
-    formPrincipal.setValue('horarioAgendamento', '');
+    formPrincipal.setValue('horaAgendamento', '');
   }, [dataSelecionada, formPrincipal]);
 
   const onSubmit = async (data: AgendamentoFormData) => {
@@ -95,14 +98,15 @@ export function AgendamentoForm() {
     }
 
     // Se o paciente existe, segue o fluxo normal
-    executarAgendamento(data.cpf, data.dataAgendamento, data.horarioAgendamento, pacienteExiste.nome);
+    executarAgendamento(data.cpf, data.dataAgendamento, data.horaAgendamento, pacienteExiste.nome);
   };
 
-  const executarAgendamento = (cpf: string, dataAgendamento: Date, horarioAgendamento: string, nome: string) => {
+  const executarAgendamento = (cpf: string, dataAgendamento: Date, horaAgendamento: string, nome: string, idPaciente?: number) => {
     adicionarAgendamento({
-      cpf: cpf,
+      idPaciente: idPaciente || pacientes.find((p) => p.cpf === cpf)?.id,
       dataAgendamento: format(dataAgendamento, 'yyyy-MM-dd'),
-      horarioAgendamento: horarioAgendamento,
+      horaAgendamento: horaAgendamento,
+      realizado: false
     });
     
     formPrincipal.reset();
@@ -110,33 +114,37 @@ export function AgendamentoForm() {
       nomePaciente: nome,
       cpf: cpf,
       data: format(dataAgendamento, 'dd/MM/yyyy'),
-      horario: horarioAgendamento,
+      horario: horaAgendamento,
     })
   };
 
   // --- FUNÇÃO DO BOTÃO "SALVAR" DENTRO DO MODAL ---
-  const handleSalvarNovoPaciente = (data: CadastroPacienteFormData) => {
+  const handleSalvarNovoPaciente = async (data: CadastroPacienteFormData) => {
     if (!dadosPendentes) {
       return;
     }
+    try {
+      // 1. Cadastra o novo paciente na base
+      const novoPaciente = await adicionarPaciente({
+        cpf: dadosPendentes.cpf,
+        nome: data.nome,
+        // Lida com o timezone criando a data a partir da string com T00:00:00
+        dataNascimento: new Date(`${data.dataNascimento}T00:00:00`), 
+      });
 
-    // 1. Cadastra o novo paciente na base
-    adicionarPaciente({
-      cpf: dadosPendentes.cpf,
-      nome: data.nome,
-      // Lida com o timezone criando a data a partir da string com T00:00:00
-      dataNascimento: new Date(`${data.dataNascimento}T00:00:00`), 
-    });
+      toast.success('Paciente cadastrado com sucesso!');
 
-    toast.success('Paciente cadastrado com sucesso!');
+      // 2. Continua o agendamento que estava pausado
+      executarAgendamento(dadosPendentes.cpf, dadosPendentes.dataAgendamento, dadosPendentes.horaAgendamento, data.nome, novoPaciente.id);
 
-    // 2. Continua o agendamento que estava pausado
-    executarAgendamento(dadosPendentes.cpf, dadosPendentes.dataAgendamento, dadosPendentes.horarioAgendamento, data.nome);
-
-    // 3. Fecha e limpa o modal
-    setModalAberto(false);    
-    formModal.reset()
-    setDadosPendentes(null);
+      // 3. Fecha e limpa o modal
+      setModalAberto(false);    
+      formModal.reset()
+      setDadosPendentes(null);
+    } catch (error) {
+      toast.error('Erro ao cadastrar paciente. Tente novamente.');
+      console.error("Erro ao cadastrar paciente", error);
+    }
   };
 
   return (
@@ -194,7 +202,7 @@ export function AgendamentoForm() {
 
             <FormField
               control={formPrincipal.control}
-              name="horarioAgendamento"
+              name="horaAgendamento"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Horário</FormLabel>

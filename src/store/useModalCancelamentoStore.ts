@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 
 export type DadosCancelamento = {
-  id: string;
+  id: number;
   nomePaciente: string;
-  cpf: string,
+  cpf: string | undefined;
   data: string;
   horario: string;
 };
