@@ -106,7 +106,7 @@ export function AgendamentoForm() {
       idPaciente: idPaciente || pacientes.find((p) => p.cpf === cpf)?.id,
       dataAgendamento: format(dataAgendamento, 'yyyy-MM-dd'),
       horaAgendamento: horaAgendamento,
-      realizado: false
+      status: 1
     });
     
     formPrincipal.reset();
