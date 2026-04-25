@@ -1,7 +1,7 @@
 export interface Agendamento {
-  id: string; 
-  cpf: string;
+  id: number; 
+  idPaciente: number | undefined;
   dataAgendamento: Date | string;
-  horarioAgendamento: string; // ex: "14:00"
+  horaAgendamento: string; // ex: "14:00"
   realizado: boolean;
 }

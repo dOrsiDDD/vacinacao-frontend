@@ -1,5 +1,6 @@
 export type Paciente = {
-  cpf: string;
+  id: number;
+  cpf: string | undefined;
   nome: string;
   dataNascimento: Date;
 };
