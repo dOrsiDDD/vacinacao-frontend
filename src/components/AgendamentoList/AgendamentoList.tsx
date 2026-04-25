@@ -44,13 +44,13 @@ export function AgendamentoList() {
         passouNoFiltroStatus = true;
         break;
       case('pendentes'):
-        passouNoFiltroStatus = agendamento.realizado === false || agendamento.realizado === undefined;
+        passouNoFiltroStatus = agendamento.status === 1 || agendamento.status === undefined;
         break;
       case('concluidos'):
-        passouNoFiltroStatus = agendamento.realizado === true;
+        passouNoFiltroStatus = agendamento.status === 2;
         break;
       default:
-        passouNoFiltroStatus = agendamento.realizado === false || agendamento.realizado === undefined;
+        passouNoFiltroStatus = agendamento.status === 1 || agendamento.status === undefined;
         break;
     }
 
@@ -159,7 +159,7 @@ export function AgendamentoList() {
                             {pacientesDoHorario.map((item, idx)  => {
                               const pacienteDados = pacientes.find(p => p.id === item.idPaciente);
                               const nomeExibicao = pacienteDados ? pacienteDados.nome : "Paciente Desconhecido";
-                              const isConcluido = item.realizado === true;
+                              const isConcluido = item.status === 2;
                             
                               return (
 

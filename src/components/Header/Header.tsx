@@ -6,7 +6,7 @@ export function Header() {
 
   // Calcula quantos agendamentos estão pendentes
   const totalPendentes = agendamentos.filter(
-    (agendamento) => agendamento.realizado === false || agendamento.realizado === undefined
+    (agendamento) => agendamento.status === 1 || agendamento.status === undefined
   ).length;
 
   return (

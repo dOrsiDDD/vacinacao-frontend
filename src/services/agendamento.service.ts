@@ -7,7 +7,7 @@ export const AgendamentoService = {
     return data;
   },
 
-  criar: async (payload: Omit<Agendamento, 'id' | 'realizado'>): Promise<Agendamento> => {
+  criar: async (payload: Omit<Agendamento, 'id' | 'status'>): Promise<Agendamento> => {
     const { data } = await api.post<Agendamento>('/agendamentos', payload);
     return data;
   },

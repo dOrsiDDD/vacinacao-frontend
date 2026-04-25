@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { type Agendamento } from '../types/agendamento';
 import { type Paciente } from '../types/paciente';
 import { api } from '../services/api';
+import { statusEnum } from '@/types/statusEnum'
 
 interface AgendamentoState {
   pacientes: Paciente[];
@@ -84,11 +85,11 @@ export const useAgendamentoStore = create<AgendamentoState>()(
 
       concluirAgendamento: async (id) => {
         try {
-          await api.put(`/CadastroAgendamento/AtualizarStatus?id=${id}`, { status: 2 });
+          await api.put(`/CadastroAgendamento/AtualizarStatus?id=${id}`, statusEnum.Concluido );
           
           set((state) => ({
             agendamentos: state.agendamentos.map((a) =>
-              a.id === id ? { ...a, realizado: true } : a
+              a.id === id ? { ...a, status: 2 } : a
             ),
           }));
         } catch (error) {
@@ -98,11 +99,11 @@ export const useAgendamentoStore = create<AgendamentoState>()(
 
       retornarParaPendente: async (id) => {
         try {
-          await api.put(`/CadastroAgendamento/AtualizarStatus?id=${id}`, { status: 1 });
+          await api.put(`/CadastroAgendamento/AtualizarStatus?id=${id}`, statusEnum.Pendente);
           
           set((state) => ({
             agendamentos: state.agendamentos.map((a) =>
-              a.id === id ? { ...a, realizado: false } : a
+              a.id === id ? { ...a, status: 1 } : a
             ),
           }));
         } catch (error) {
