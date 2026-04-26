@@ -2,21 +2,12 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { type Agendamento } from '../types/agendamento';
 import { type Paciente } from '../types/paciente';
-import { api } from '../services/api';
-import { statusEnum } from '@/types/statusEnum'
+import { AgendamentoService } from '@/services/agendamentoService';
 
 interface AgendamentoState {
   pacientes: Paciente[];
   agendamentos: Agendamento[];
   isLoading: boolean;
-
-  buscarAgendamentos: () => Promise<void>;
-  buscarPacientes: () => Promise<void>;
-  adicionarAgendamento: (novoAgendamento : Omit<Agendamento, 'id'>) => Promise<void>;
-  adicionarPaciente: (paciente: Omit<Paciente, 'id'>) => Promise<Paciente>;
-  concluirAgendamento: (id: number) => Promise<void>;
-  retornarParaPendente: (id: number) => Promise<void>;
-  cancelarAgendamento: (id: number) => Promise<void>;
 }
 
 export const useAgendamentoStore = create<AgendamentoState>()(
@@ -30,8 +21,8 @@ export const useAgendamentoStore = create<AgendamentoState>()(
       buscarPacientes: async () => {
         set({ isLoading: true });
         try {
-          const response = await api.get('/CadastroPaciente/ListarPacientes');
-          set({ pacientes: response.data });
+          const dados = await AgendamentoService.buscarPacientes();
+          set({ pacientes: dados });
         } catch (error) {
           console.error("Erro ao buscar pacientes", error);
         } finally {
@@ -42,22 +33,18 @@ export const useAgendamentoStore = create<AgendamentoState>()(
       buscarAgendamentos: async () => {
         set({ isLoading: true });
         try {
-          const response = await api.get('/CadastroAgendamento/ListarAgendamentos');
-          set({ agendamentos: response.data });
+          const dados = await AgendamentoService.buscarAgendamentos();
+          set({ agendamentos: dados });
         } catch (error) {
           console.error("Erro ao buscar agendamentos", error);
         } finally {
           set({ isLoading: false });
         }
       },  
-      adicionarPaciente: async (paciente) => {
+      adicionarPaciente: async (paciente: Paciente) => {
         try {
-          const pacienteFormatado = {
-            ...paciente,
-            dataNascimento: typeof paciente.dataNascimento === 'string' ? paciente.dataNascimento : paciente.dataNascimento.toISOString().split('T')[0],
-          };
-          const response = await api.post('/CadastroPaciente/CadastrarPaciente', pacienteFormatado);
-          const pacienteCadastrado: Paciente = response.data;
+          const dados = await AgendamentoService.adicionarPaciente(paciente);
+          const pacienteCadastrado: Paciente = dados;
           set((state) => ({
             pacientes: [...state.pacientes, pacienteCadastrado] 
           }));
@@ -68,25 +55,20 @@ export const useAgendamentoStore = create<AgendamentoState>()(
         }
       },
 
-      adicionarAgendamento: async (novoAgendamento) => {
+      adicionarAgendamento: async (agendamento: Agendamento) => {
         try {
-          const agendamentoFormatado = {
-            ...novoAgendamento,
-            dataAgendamento: typeof novoAgendamento.dataAgendamento === 'string' ? novoAgendamento.dataAgendamento : novoAgendamento.dataAgendamento.toISOString().split('T')[0],
-          };
-          const response = await api.post('/CadastroAgendamento/CadastrarAgendamento', agendamentoFormatado);
+          const dados = await AgendamentoService.adicionarAgendamento(agendamento);
           set((state) => ({
-            agendamentos: [...state.agendamentos, response.data]
+            agendamentos: [...state.agendamentos, dados]
           }));
         } catch (error) {
           console.error("Erro ao agendar", error);
         }
       },
 
-      concluirAgendamento: async (id) => {
+      concluirAgendamento: async (id: number) => {
         try {
-          await api.put(`/CadastroAgendamento/AtualizarStatus?id=${id}`, statusEnum.Concluido );
-          
+          await AgendamentoService.concluirAgendamento(id);
           set((state) => ({
             agendamentos: state.agendamentos.map((a) =>
               a.id === id ? { ...a, status: 2 } : a
@@ -97,10 +79,9 @@ export const useAgendamentoStore = create<AgendamentoState>()(
         }
       },
 
-      retornarParaPendente: async (id) => {
+      retornarParaPendente: async (id: number) => {
         try {
-          await api.put(`/CadastroAgendamento/AtualizarStatus?id=${id}`, statusEnum.Pendente);
-          
+          await AgendamentoService.retornarParaPendente(id);
           set((state) => ({
             agendamentos: state.agendamentos.map((a) =>
               a.id === id ? { ...a, status: 1 } : a
@@ -111,10 +92,9 @@ export const useAgendamentoStore = create<AgendamentoState>()(
         }
       },
 
-      cancelarAgendamento: async (id) => {
+      cancelarAgendamento: async (id: number) => {
         try {
-          await api.delete(`/CadastroAgendamento/DeletarAgendamento?id=${id}`);
-          
+          await AgendamentoService.cancelarAgendamento(id);
           set((state) => ({
             agendamentos: state.agendamentos.filter((a) => a.id !== id),
           }));
