@@ -1,8 +1,17 @@
 import { useAgendamentoStore } from '../../store/useAgendamentoStore';
-import { Bell } from 'lucide-react'; // Ícone de sino do Lucide
+import { Bell } from 'lucide-react'; 
+import { useAuthStore } from '@/store/useAuthStore';
+import { useNavigate } from '@tanstack/react-router';
 
 export function Header() {
   const { agendamentos } = useAgendamentoStore();
+  const logout = useAuthStore((state) => state.logout);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate({ to: '/login' });
+  };
 
   // Calcula quantos agendamentos estão pendentes
   const totalPendentes = agendamentos.filter(
@@ -25,8 +34,17 @@ export function Header() {
             </span>
           )}
         </div>
-        
+
+        <div>
+          <button 
+            onClick={handleLogout}
+            style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '8px 15px', cursor: 'pointer', borderRadius: '4px' }}
+          >
+            Sair
+          </button>
+          </div>
       </div>
+
     </header>
   );
 }
