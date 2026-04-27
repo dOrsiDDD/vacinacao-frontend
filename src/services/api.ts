@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useLoadingStore } from '../store/useLoadingStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export const api = axios.create({
   baseURL: 'https://localhost:7052/', 
@@ -18,11 +19,10 @@ api.interceptors.request.use(
     }
     activeRequests++;
 
-    // TODO: Adicionar o token JWT aqui
-    // const token = localStorage.getItem('token');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    const token = useAuthStore.getState().token;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
     return config;
   },

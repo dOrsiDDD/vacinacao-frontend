@@ -1,5 +1,8 @@
-import { createRouter, createRoute, createRootRoute, Outlet } from '@tanstack/react-router';
+import { createRouter, createRoute, createRootRoute, Outlet, redirect } from '@tanstack/react-router';
 import App from './App'; 
+import { useAuthStore } from '@/store/useAuthStore'
+import { Login } from '@/components/Login/Login'
+import { AdminPanel } from './components/UsuarioForm/UsuarioForm';
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -12,24 +15,51 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: App, // Renderiza o nosso App.tsx
+  component: App,
+  beforeLoad: () => {
+    const { isAuthenticated, usuario } = useAuthStore.getState();
+    
+    if (!isAuthenticated) {
+      throw redirect({ to: '/login' });
+    }
+    
+    if (usuario?.perfil === 1) {
+      throw redirect({ to: '/admin' });
+    }
+  },
 });
 
-// Rota de Login (Um placeholder provisório)
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
-  component: () => (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="p-8 bg-white shadow-md rounded-xl text-center border">
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Acesso Restrito</h1>
-        <p className="text-slate-500">Tela de Login será implementada aqui.</p>
-      </div>
-    </div>
-  ),
+  component: Login,
+  beforeLoad: () => {
+    const { isAuthenticated, usuario } = useAuthStore.getState();
+    if (isAuthenticated) {
+      if (usuario?.perfil === 1) throw redirect({ to: '/admin' });
+      throw redirect({ to: '/' });
+    }
+  },
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, loginRoute]);
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin',
+  component: AdminPanel,
+  beforeLoad: () => {
+    const { isAuthenticated, usuario } = useAuthStore.getState();
+    
+    if (!isAuthenticated) {
+      throw redirect({ to: '/login' });
+    }
+    // Se for Médico tentando acessar painel de admin, chuta de volta pra home
+    if (usuario?.perfil !== 1) {
+      throw redirect({ to: '/' });
+    }
+  },
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, loginRoute, adminRoute]);
 
 export const router = createRouter({ routeTree });
 

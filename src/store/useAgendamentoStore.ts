@@ -8,6 +8,8 @@ interface AgendamentoState {
   pacientes: Paciente[];
   agendamentos: Agendamento[];
   isLoading: boolean;
+  adicionarPaciente:(paciente: Omit<Paciente, 'id'>) => Promise<Paciente>;
+  adicionarAgendamento: (agendamento: Omit<Agendamento, 'id'>) => Promise<Agendamento>;
 }
 
 export const useAgendamentoStore = create<AgendamentoState>()(
@@ -41,7 +43,7 @@ export const useAgendamentoStore = create<AgendamentoState>()(
           set({ isLoading: false });
         }
       },  
-      adicionarPaciente: async (paciente: Paciente) => {
+      adicionarPaciente: async (paciente: Omit<Paciente, 'id'>) => {
         try {
           const dados = await AgendamentoService.adicionarPaciente(paciente);
           const pacienteCadastrado: Paciente = dados;
@@ -55,14 +57,16 @@ export const useAgendamentoStore = create<AgendamentoState>()(
         }
       },
 
-      adicionarAgendamento: async (agendamento: Agendamento) => {
+      adicionarAgendamento: async (agendamento: Omit<Agendamento, 'id'>) => {
         try {
           const dados = await AgendamentoService.adicionarAgendamento(agendamento);
           set((state) => ({
             agendamentos: [...state.agendamentos, dados]
           }));
+          return dados;
         } catch (error) {
           console.error("Erro ao agendar", error);
+          throw error;
         }
       },
 
